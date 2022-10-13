@@ -14,7 +14,6 @@
 	<depend>gflags_catkin</depend>
 	<depend>glog_catkin</depend>
   <depend>maplab_msgs</depend>
-  <depend>odometry_msgs</depend>
-  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
 
 </package>
