@@ -27,7 +27,10 @@ int main(int argc, char** argv) {
    return 1;
   }
 
-  ros::spin();
+  std::atomic<bool>& end_of_days_signal_received = odometry_converter.shouldExit();
+  while (ros::ok() && !end_of_days_signal_received.load()) {
+   std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
 
   odometry_converter.shutdown();
   return 0;

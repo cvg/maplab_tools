@@ -1,6 +1,8 @@
 #include "odometry_converter/node.h"
 
 #include <maplab_msgs/OdometryWithImuBiases.h>
+#include <boost/bind.hpp>
+#include <glog/logging.h>
 
 DEFINE_string(
     odom_topic, "/ros_odom",
@@ -10,7 +12,9 @@ namespace maplab {
 
 OdometryConverter::OdometryConverter(ros::NodeHandle& nh, const ros::NodeHandle& nh_private) :
   nh_(nh),
-  nh_private_(nh_private) {
+  nh_private_(nh_private),
+  spinner_(1),
+  should_exit_(false) {
 
   LOG(INFO)
       << "[OdometryConverter] Initializing publisher...";
@@ -22,11 +26,15 @@ OdometryConverter::OdometryConverter(ros::NodeHandle& nh, const ros::NodeHandle&
 
 bool OdometryConverter::run() {
   LOG(INFO) << "[OdometryConverter] Starting...";
+  spinner_.start();
   return true;
 }
 
 void OdometryConverter::shutdown() {
   // noop
+}
+std::atomic<bool>& OdometryConverter::shouldExit() {
+  return should_exit_;
 }
 
 bool OdometryConverter::initializeServicesAndSubscribers() {

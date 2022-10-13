@@ -4,6 +4,8 @@
 #include <glog/logging.h>
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
+#include <atomic>
+#include <functional>
 
 namespace maplab {
 
@@ -14,6 +16,7 @@ class OdometryConverter {
 
   bool run();
   void shutdown();
+    std::atomic<bool>& shouldExit();
 
  private:
   bool initializeServicesAndSubscribers();
@@ -23,9 +26,12 @@ class OdometryConverter {
 
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
+    ros::AsyncSpinner spinner_;
 
   ros::Subscriber odom_sub_;
   ros::Publisher maplab_odom_pub_;
+
+    std::atomic<bool> should_exit_;
 };
 
 }
