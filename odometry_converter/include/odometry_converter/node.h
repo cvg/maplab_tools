@@ -3,7 +3,7 @@
 
 #include <glog/logging.h>
 #include <ros/ros.h>
-#include <nag_msgs/Odometry.h>
+#include <nav_msgs/Odometry.h>
 
 namespace maplab {
 
@@ -19,14 +19,14 @@ class OdometryConverter {
   bool initializeServicesAndSubscribers();
 
   void odomCallback(
-      const nav_msgs::OdometryMsgPtr& msg);
+      const nav_msgs::Odometry::ConstPtr& msg);
 
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
 
   ros::Subscriber odom_sub_;
   ros::Publisher maplab_odom_pub_;
-}
+};
 
 }
 
