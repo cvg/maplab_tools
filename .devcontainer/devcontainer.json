@@ -1,5 +1,7 @@
 {
-  "image": "registry.ethz.ch/cvg/robotics/maplab:latest",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "forwardPorts": [3000],
   "workspaceFolder": "/usr/home/ws/src/maplab/dependencies/internal/maplab_tools",
   "workspaceMount": "source=${localWorkspaceFolder},target=/usr/home/ws/src/maplab/dependencies/internal/maplab_tools/,type=bind"
