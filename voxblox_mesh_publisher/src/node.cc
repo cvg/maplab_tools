@@ -55,10 +55,15 @@ void MeshPublisher::voxbloxMeshCallback(
   voxblox::Mesh full_mesh;
   bool first = true;
 
-  geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
-      FLAGS_target_frame, msg->header.frame_id, ros::Time(0));
   kindr::minimal::QuatTransformationTemplate<float> T_O_I;
-  tf::transformMsgToKindr(transform.transform, &T_O_I);
+  try {
+    geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
+        FLAGS_target_frame, msg->header.frame_id, ros::Time(0));
+    tf::transformMsgToKindr(transform.transform, &T_O_I);
+  } catch (tf2::TransformException& ex) {
+    ROS_WARN("%s", ex.what());
+    return;
+  }
 
   for (const voxblox_msgs::MeshBlock& mesh_block : msg->mesh_blocks) {
     const voxblox::BlockIndex index(
