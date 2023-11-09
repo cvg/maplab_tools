@@ -5,7 +5,7 @@
 #include <maplab_msgs/OdometryWithImuBiases.h>
 
 DEFINE_string(
-    voxblox_mesh_topic, "/voxblox/mesh",
+    voxblox_mesh_topic, "/voxblox_node/mesh",
     "Defines the topic of the voxblox mesh message that will be converted");
 
 namespace maplab {
@@ -37,9 +37,9 @@ bool MeshPublisher::initializeServicesAndSubscribers() {
   boost::function<void(const voxblox_msgs::Mesh::ConstPtr&)> mesh_callback =
       boost::bind(&MeshPublisher::voxbloxMeshCallback, this, _1);
   odom_sub_ = nh_.subscribe(FLAGS_voxblox_mesh_topic, 10, mesh_callback);
-  mesh_pub_ = nh_.advertise<shape_msgs::Mesh>("~mesh", 1, true);
+  mesh_pub_ = nh_private_.advertise<shape_msgs::Mesh>("mesh", 1, true);
   marker_pub_ =
-      nh_.advertise<visualization_msgs::Marker>("~mesh_marker", 1, true);
+      nh_private_.advertise<visualization_msgs::Marker>("mesh_marker", 1, true);
   return true;
 }
 
@@ -129,6 +129,48 @@ void MeshPublisher::voxbloxMeshCallback(const voxblox_msgs::Mesh::ConstPtr& msg)
       voxblox::createConnectedMesh(mesh, &connected_mesh);
       full_mesh.concatenateMesh(connected_mesh);
     }
+
+    // convert to ROS MeshMarker
+    voxblox::Mesh connected_mesh;
+    voxblox::createConnectedMesh(mesh, &connected_mesh);
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "world";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "voxblox";\
+    voxblox::AnyIndexHash hasher;
+    marker.id = hasher(index);
+    marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.lifetime = ros::Duration(0);
+    marker.pose.position.x = 0;
+    marker.pose.position.y = 0;
+    marker.pose.position.z = 0;
+    marker.pose.orientation.w = 1.0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.scale.x = 1;
+    marker.scale.y = 1;
+    marker.scale.z = 1;
+    marker.color.r = 0.5;
+    marker.color.g = 0.5;
+    marker.color.b = 0.5;
+    marker.color.a = 1.0;
+    for (size_t i : full_mesh.indices) {
+      geometry_msgs::Point point;
+      point.x = full_mesh.vertices[i].x();
+      point.y = full_mesh.vertices[i].y();
+      point.z = full_mesh.vertices[i].z();
+      marker.points.push_back(point);
+
+      std_msgs::ColorRGBA color;
+      color.r = full_mesh.colors[i].r / 255.0;
+      color.g = full_mesh.colors[i].g / 255.0;
+      color.b = full_mesh.colors[i].b / 255.0;
+      color.a = 1.0;
+      marker.colors.push_back(color);
+    }
+    marker_pub_.publish(marker);
   }
 
   // convert to ROS Mesh
@@ -149,35 +191,6 @@ void MeshPublisher::voxbloxMeshCallback(const voxblox_msgs::Mesh::ConstPtr& msg)
   }
   mesh_pub_.publish(out_mesh);
 
-  // convert to ROS MeshMarker
-  visualization_msgs::Marker marker;
-  marker.header.frame_id = "world";
-  marker.header.stamp = ros::Time::now();
-  marker.ns = "voxblox";
-  marker.id = 0;
-  marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
-  marker.action = visualization_msgs::Marker::ADD;
-  marker.pose.position.x = 0;
-  marker.pose.position.y = 0;
-  marker.pose.position.z = 0;
-  marker.scale.x = 1;
-  marker.scale.y = 1;
-  marker.scale.z = 1;
-  for (size_t i : full_mesh.indices) {
-    geometry_msgs::Point point;
-    point.x = full_mesh.vertices[i].x();
-    point.y = full_mesh.vertices[i].y();
-    point.z = full_mesh.vertices[i].z();
-    marker.points.push_back(point);
-
-    std_msgs::ColorRGBA color;
-    color.r = full_mesh.colors[i].r / 255.0;
-    color.g = full_mesh.colors[i].g / 255.0;
-    color.b = full_mesh.colors[i].b / 255.0;
-    color.a = full_mesh.colors[i].a / 255.0;
-    marker.colors.push_back(color);
-  }
-  marker_pub_.publish(marker);
 }
 
 }  // namespace maplab
