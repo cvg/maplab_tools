@@ -152,8 +152,8 @@ void MeshPublisher::voxbloxMeshCallback(
     voxblox::Mesh connected_mesh;
     voxblox::createConnectedMesh(mesh, &connected_mesh);
     visualization_msgs::Marker marker;
-    marker.header.frame_id = "world";
-    marker.header.stamp = ros::Time::now();
+    marker.header.frame_id = FLAGS_target_frame;
+    marker.header.stamp = msg->header.stamp;
     marker.ns = "voxblox";
     voxblox::AnyIndexHash hasher;
     marker.id = hasher(index);
