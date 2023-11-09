@@ -7,12 +7,19 @@
 DEFINE_string(
     voxblox_mesh_topic, "/voxblox_node/mesh",
     "Defines the topic of the voxblox mesh message that will be converted");
+DEFINE_string(
+    target_frame, "unity",
+    "Defines the topic of the voxblox mesh message that will be converted");
 
 namespace maplab {
 
 MeshPublisher::MeshPublisher(
     ros::NodeHandle& nh, const ros::NodeHandle& nh_private)
-    : nh_(nh), nh_private_(nh_private), spinner_(1), should_exit_(false) {
+    : nh_(nh),
+      nh_private_(nh_private),
+      spinner_(1),
+      should_exit_(false),
+      tf_listener_(tf_buffer_) {
   LOG(INFO) << "[MeshPublisher] Initializing publisher...";
   if (!initializeServicesAndSubscribers()) {
     LOG(FATAL) << "[MeshPublisher] "
@@ -43,9 +50,15 @@ bool MeshPublisher::initializeServicesAndSubscribers() {
   return true;
 }
 
-void MeshPublisher::voxbloxMeshCallback(const voxblox_msgs::Mesh::ConstPtr& msg) {
+void MeshPublisher::voxbloxMeshCallback(
+    const voxblox_msgs::Mesh::ConstPtr& msg) {
   voxblox::Mesh full_mesh;
   bool first = true;
+
+  geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
+      FLAGS_target_frame, msg->header.frame_id, ros::Time(0));
+  kindr::minimal::QuatTransformationTemplate<float> T_O_I;
+  tf::transformMsgToKindr(transform.transform, &T_O_I);
 
   for (const voxblox_msgs::MeshBlock& mesh_block : msg->mesh_blocks) {
     const voxblox::BlockIndex index(
@@ -136,7 +149,7 @@ void MeshPublisher::voxbloxMeshCallback(const voxblox_msgs::Mesh::ConstPtr& msg)
     visualization_msgs::Marker marker;
     marker.header.frame_id = "world";
     marker.header.stamp = ros::Time::now();
-    marker.ns = "voxblox";\
+    marker.ns = "voxblox";
     voxblox::AnyIndexHash hasher;
     marker.id = hasher(index);
     marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
@@ -156,17 +169,18 @@ void MeshPublisher::voxbloxMeshCallback(const voxblox_msgs::Mesh::ConstPtr& msg)
     marker.color.g = 0.5;
     marker.color.b = 0.5;
     marker.color.a = 1.0;
-    for (size_t i : full_mesh.indices) {
+    for (size_t i : connected_mesh.indices) {
+      Eigen::Vector3f point_eigen = T_O_I * connected_mesh.vertices[i];
       geometry_msgs::Point point;
-      point.x = full_mesh.vertices[i].x();
-      point.y = full_mesh.vertices[i].y();
-      point.z = full_mesh.vertices[i].z();
+      point.x = point_eigen.x();
+      point.y = point_eigen.y();
+      point.z = point_eigen.z();
       marker.points.push_back(point);
 
       std_msgs::ColorRGBA color;
-      color.r = full_mesh.colors[i].r / 255.0;
-      color.g = full_mesh.colors[i].g / 255.0;
-      color.b = full_mesh.colors[i].b / 255.0;
+      color.r = connected_mesh.colors[i].r / 255.0;
+      color.g = connected_mesh.colors[i].g / 255.0;
+      color.b = connected_mesh.colors[i].b / 255.0;
       color.a = 1.0;
       marker.colors.push_back(color);
     }
@@ -190,7 +204,6 @@ void MeshPublisher::voxbloxMeshCallback(const voxblox_msgs::Mesh::ConstPtr& msg)
     out_mesh.triangles.push_back(triangle);
   }
   mesh_pub_.publish(out_mesh);
-
 }
 
 }  // namespace maplab
