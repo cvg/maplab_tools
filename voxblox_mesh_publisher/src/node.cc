@@ -10,6 +10,9 @@ DEFINE_string(
 DEFINE_string(
     target_frame, "unity",
     "Defines the topic of the voxblox mesh message that will be converted");
+DEFINE_double(
+    mesh_alpha, 1.0,
+    "Defines the alpha value of the mesh");
 
 namespace maplab {
 
@@ -173,7 +176,7 @@ void MeshPublisher::voxbloxMeshCallback(
     marker.color.r = 0.5;
     marker.color.g = 0.5;
     marker.color.b = 0.5;
-    marker.color.a = 1.0;
+    marker.color.a = FLAGS_mesh_alpha;
     for (size_t i : connected_mesh.indices) {
       Eigen::Vector3f point_eigen = T_O_I * connected_mesh.vertices[i];
       geometry_msgs::Point point;
