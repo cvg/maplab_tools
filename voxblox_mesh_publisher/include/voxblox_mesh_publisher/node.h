@@ -43,7 +43,6 @@ class MeshPublisher {
   tf2_ros::TransformListener tf_listener_;
 
   ros::Subscriber odom_sub_;
-  ros::Publisher mesh_pub_;
   ros::Publisher marker_pub_;
 
   std::atomic<bool> should_exit_;

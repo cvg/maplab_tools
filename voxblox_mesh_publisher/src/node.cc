@@ -47,7 +47,6 @@ bool MeshPublisher::initializeServicesAndSubscribers() {
   boost::function<void(const voxblox_msgs::Mesh::ConstPtr&)> mesh_callback =
       boost::bind(&MeshPublisher::voxbloxMeshCallback, this, _1);
   odom_sub_ = nh_.subscribe(FLAGS_voxblox_mesh_topic, 10, mesh_callback);
-  mesh_pub_ = nh_private_.advertise<shape_msgs::Mesh>("mesh", 1, true);
   marker_pub_ =
       nh_private_.advertise<visualization_msgs::Marker>("mesh_marker", 1, true);
   return true;
@@ -55,9 +54,6 @@ bool MeshPublisher::initializeServicesAndSubscribers() {
 
 void MeshPublisher::voxbloxMeshCallback(
     const voxblox_msgs::Mesh::ConstPtr& msg) {
-  voxblox::Mesh full_mesh;
-  bool first = true;
-
   kindr::minimal::QuatTransformationTemplate<float> T_O_I;
   try {
     geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(
@@ -105,18 +101,6 @@ void MeshPublisher::voxbloxMeshCallback(
       mesh.vertices.emplace_back(mesh_x, mesh_y, mesh_z);
     }
 
-    // calculate normals
-    mesh.normals.reserve(mesh.vertices.size());
-    for (size_t i = 0; i < mesh.vertices.size(); i += 3) {
-      const voxblox::Point dir0 = mesh.vertices[i] - mesh.vertices[i + 1];
-      const voxblox::Point dir1 = mesh.vertices[i] - mesh.vertices[i + 2];
-      const voxblox::Point normal = dir0.cross(dir1).normalized();
-
-      mesh.normals.push_back(normal);
-      mesh.normals.push_back(normal);
-      mesh.normals.push_back(normal);
-    }
-
     // add color information
     mesh.colors.reserve(mesh.vertices.size());
     const bool has_color = mesh_block.x.size() == mesh_block.r.size();
@@ -138,17 +122,6 @@ void MeshPublisher::voxbloxMeshCallback(
       }
       color.a = 1.0;
       mesh.colors.push_back(color);
-    }
-
-    // connect mesh
-
-    if (first) {
-      voxblox::createConnectedMesh(mesh, &full_mesh);
-      first = false;
-    } else {
-      voxblox::Mesh connected_mesh;
-      voxblox::createConnectedMesh(mesh, &connected_mesh);
-      full_mesh.concatenateMesh(connected_mesh);
     }
 
     // convert to ROS MeshMarker
@@ -194,24 +167,6 @@ void MeshPublisher::voxbloxMeshCallback(
     }
     marker_pub_.publish(marker);
   }
-
-  // convert to ROS Mesh
-  shape_msgs::Mesh out_mesh;
-  for (auto vertex : full_mesh.vertices) {
-    geometry_msgs::Point point;
-    point.x = vertex.x();
-    point.y = vertex.y();
-    point.z = vertex.z();
-    out_mesh.vertices.push_back(point);
-  }
-  for (size_t i = 0; i < full_mesh.indices.size(); i += 3) {
-    shape_msgs::MeshTriangle triangle;
-    triangle.vertex_indices[0] = full_mesh.indices[i];
-    triangle.vertex_indices[1] = full_mesh.indices[i + 1];
-    triangle.vertex_indices[2] = full_mesh.indices[i + 2];
-    out_mesh.triangles.push_back(triangle);
-  }
-  mesh_pub_.publish(out_mesh);
 }
 
 }  // namespace maplab
