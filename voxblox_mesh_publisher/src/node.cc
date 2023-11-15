@@ -101,6 +101,17 @@ void MeshPublisher::voxbloxMeshCallback(
       mesh.vertices.emplace_back(mesh_x, mesh_y, mesh_z);
     }
 
+    // calculate normals
+    mesh.normals.reserve(mesh.vertices.size());
+    for (size_t i = 0; i < mesh.vertices.size(); i += 3) {
+      const voxblox::Point dir0 = mesh.vertices[i] - mesh.vertices[i + 1];
+      const voxblox::Point dir1 = mesh.vertices[i] - mesh.vertices[i + 2];
+      const voxblox::Point normal = dir0.cross(dir1).normalized();
+      mesh.normals.push_back(normal);
+      mesh.normals.push_back(normal);
+      mesh.normals.push_back(normal);
+    }
+
     // add color information
     mesh.colors.reserve(mesh.vertices.size());
     const bool has_color = mesh_block.x.size() == mesh_block.r.size();
@@ -162,7 +173,7 @@ void MeshPublisher::voxbloxMeshCallback(
       color.r = connected_mesh.colors[i].r / 255.0;
       color.g = connected_mesh.colors[i].g / 255.0;
       color.b = connected_mesh.colors[i].b / 255.0;
-      color.a = 1.0;
+      color.a = FLAGS_mesh_alpha;
       marker.colors.push_back(color);
     }
     marker_pub_.publish(marker);
